@@ -1,183 +1,225 @@
-(function($){
-  /*toTop start*/
-  // When to show the scroll link
-  // higher number = scroll link appears further down the page
-  var upperLimit = 1000;
-  // Our scroll link element
-  var scrollElem = $('#totop');
-  // Scroll to top speed
-  var scrollSpeed = 500;
-  // Show and hide the scroll to top link based on scroll position
-  $(window).scroll(function() {
-    var scrollTop = $(document).scrollTop();
+/* ========================================
+   NEON TECH — Interactive Scripts
+   ======================================== */
+
+(function() {
+  'use strict';
+
+  /* ---------- Back to Top ---------- */
+  var totop = document.getElementById('totop');
+  var upperLimit = 800;
+
+  function toggleTotop() {
+    var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     if (scrollTop > upperLimit) {
-      $(scrollElem).stop().fadeTo(300, 1); // fade back in
+      totop.classList.add('visible');
     } else {
-      $(scrollElem).stop().fadeTo(300, 0); // fade out
+      totop.classList.remove('visible');
     }
+  }
+
+  window.addEventListener('scroll', toggleTotop);
+
+  totop.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
-  // Scroll to top animation on click
-  $(scrollElem).click(function() {
-    $('html, body').animate({
-      scrollTop: 0
-    }, scrollSpeed);
-    return false;
-  });
-  /*toTop end*/
+  /* ---------- Scroll Reveal Animation ---------- */
+  var reveals = document.querySelectorAll('.reveal');
 
-  /*cubeRotate start*/
-  var isIE = function(){
-	return ("ActiveXObject" in window);
-  };
-  if( isIE() ) {
-    $('#contenedor').hide();
-  } else {
-    var cube = $('.cube'),
-        offset = $('#contenedor').offset(),
-        offsetleft = (offset.left + 50),
-        offsettop = (offset.top + 50);
-
-    cube.on({
-      mousemove: function(e) {
-        $(this).css('transform','rotateX(' + (e.pageY - offsettop) + 'deg) rotateY(' + (e.pageX - offsetleft) + 'deg)');
-        $(this).addClass('noanimar').removeClass('animar');
-      },
-      mouseout: function() {
-        $(this).css('transform','rotateX(-25deg) rotateY(32deg)');
-        $(this).addClass('animar').removeClass('noanimar');
+  function revealOnScroll() {
+    var windowHeight = window.innerHeight;
+    reveals.forEach(function(el) {
+      var top = el.getBoundingClientRect().top;
+      var revealPoint = 120;
+      if (top < windowHeight - revealPoint) {
+        el.classList.add('visible');
       }
     });
-    // console.log('x=' + offsetleft + ', y=' + offsettop);
   }
-  /* cubeRotate end*/
 
-  // Share
-  $('body').on('click', function(){
-    $('.article-share-box.on').removeClass('on');
-    $('.qrcode').hide();
-  }).on('click', '.article-share-link', function(e){
+  window.addEventListener('scroll', revealOnScroll);
+  window.addEventListener('load', revealOnScroll);
+  revealOnScroll(); // run on load in case some are already visible
+
+  /* ---------- Header Parallax Glow ---------- */
+  var header = document.getElementById('header');
+
+  if (header) {
+    window.addEventListener('scroll', function() {
+      var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      var opacity = Math.max(0, 1 - scrollTop / 400);
+      header.style.opacity = opacity;
+
+      // Move header rings
+      var scale = 1 + scrollTop * 0.001;
+      var rings = header.querySelector(':after');
+      // We adjust through the header itself for simplicity
+      if (scrollTop < 360) {
+        header.style.backgroundPosition = '50% ' + (scrollTop * 0.3) + 'px';
+      }
+    });
+  }
+
+  /* ---------- Share Button ---------- */
+  document.addEventListener('click', function(e) {
+    document.querySelectorAll('.article-share-box.on').forEach(function(b) { b.classList.remove('on'); });
+    document.querySelectorAll('.qrcode').forEach(function(q) { q.style.display = 'none'; });
+  });
+
+  document.addEventListener('click', function(e) {
+    var link = e.target.closest('.article-share-link');
+    if (!link) return;
+
     e.stopPropagation();
+    e.preventDefault();
 
-    var $this = $(this),
-      type = $this.attr('data-share'),
-      offset = $this.offset();
+    var url = link.getAttribute('data-url') || window.location.href;
+    var encodedUrl = encodeURIComponent(url);
+    var id = 'article-share-box-' + link.getAttribute('data-id');
 
-    var url = $this.attr('data-url'),
-    encodedUrl = encodeURIComponent(url),
-    id = 'article-share-box-' + $this.attr('data-id');
+    var existing = document.getElementById(id);
+    if (existing) {
+      existing.classList.toggle('on');
+      return;
+    }
 
-    if ($('#' + id).length){
-      var box = $('#' + id);
+    var box = document.createElement('div');
+    box.id = id;
+    box.className = 'article-share-box';
+    box.innerHTML =
+      '<input class="article-share-input" value="' + url + '" readonly>' +
+      '<div class="article-share-links">' +
+        '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter">T</a>' +
+        '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook">F</a>' +
+        '<a href="https://www.linkedin.com/shareArticle?url=' + encodedUrl + '" class="article-share-linkedin" target="_blank" title="LinkedIn">L</a>' +
+        '<a href="http://service.weibo.com/share/share.php?url=' + encodedUrl + '" class="article-share-weibo" target="_blank" title="Weibo">W</a>' +
+        '<a class="article-share-weixin" title="WeChat">V</a>' +
+        '<a class="article-copy-link" title="Copy Link">&#128279;</a>' +
+      '</div>';
 
-      if (box.hasClass('on')){
-        box.removeClass('on');
+    box.addEventListener('click', function(ev) { ev.stopPropagation(); });
+    document.body.appendChild(box);
+
+    var rect = link.getBoundingClientRect();
+    box.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+    box.style.left = (rect.left + window.scrollX - 180) + 'px';
+    box.classList.add('on');
+
+    box.querySelector('.article-share-input').addEventListener('click', function() {
+      this.select();
+    });
+
+    box.querySelector('.article-copy-link').addEventListener('click', function() {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() {
+          var btn = box.querySelector('.article-copy-link');
+          btn.textContent = '✓';
+          setTimeout(function() { btn.textContent = '🔗'; }, 1500);
+        });
+      } else {
+        box.querySelector('.article-share-input').select();
+        document.execCommand('copy');
+      }
+    });
+
+    box.querySelector('.article-share-weixin').addEventListener('click', function() {
+      var qrDiv = box.nextElementSibling;
+      if (qrDiv && qrDiv.classList.contains('qrcode')) {
+        qrDiv.style.display = qrDiv.style.display === 'block' ? 'none' : 'block';
         return;
       }
-    } else {
-      var html = [
-        '<div id="' + id + '" class="article-share-box">',
-          '<input class="article-share-input" value="' + url + '">',
-          '<div class="article-share-links">',
-            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
-            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
-            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
-            '<a href="https://www.linkedin.com/shareArticle?url=' + encodedUrl + '" class="article-share-linkedin" target="_blank" title="Linkedin"></a>',
-            '<a href="http://service.weibo.com/share/share.php?url=' + encodedUrl + '" class="article-share-weibo" target="_blank" title="Weibo"></a>',
-            '<a href="http://share.renren.com/share/buttonshare.do?link=' + encodedUrl + '" class="article-share-renren" target="_blank" title="Renren"></a>',
-            '<a href="http://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=' + encodedUrl + '" class="article-share-qq" target="_blank" title="Qzone"></a>',
-            '<a class="article-share-weixin" target="_blank" title="Weixin"></a>',
-          '</div>',
-        '</div>'
-      ].join('');
+      qrDiv = document.createElement('div');
+      qrDiv.className = 'qrcode';
+      qrDiv.style.cssText = 'padding:10px;text-align:center;';
+      var canvas = document.createElement('canvas');
+      canvas.width = 180; canvas.height = 180;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#12121a'; ctx.fillRect(0, 0, 180, 180);
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('QR: ' + url.substring(0, 35) + '...', 90, 90);
+      qrDiv.appendChild(canvas);
+      box.parentNode.insertBefore(qrDiv, box.nextSibling);
+      var boxRect = box.getBoundingClientRect();
+      qrDiv.style.position = 'absolute';
+      qrDiv.style.top = (boxRect.bottom + window.scrollY + 8) + 'px';
+      qrDiv.style.left = (boxRect.left + window.scrollX - 180) + 'px';
+    });
+  });
 
-      var box = $(html);
+  /* ---------- Image Caption + Lightbox ---------- */
+  document.querySelectorAll('.article-entry').forEach(function(entry) {
+    entry.querySelectorAll('img').forEach(function(img) {
+      if (img.parentElement.classList.contains('fancybox') ||
+          img.parentElement.classList.contains('lightbox-overlay')) return;
 
-      $('body').append(box);
-    }
-
-    box.css({
-      top: offset.top + 25,
-      left: offset.left
-    }).addClass('on');
-
-    $('.article-share-weixin').click(function(){
-      var e_qrcode = $(this).parents('.article-share-box').next('.qrcode');
-      if (e_qrcode.length){
-        e_qrcode.show();
-      } else {
-        $(this).parents('.article-share-box').after('<div class="qrcode"></div>');
-        e_qrcode = $(this).parents('.article-share-box').next('.qrcode');
-        e_qrcode.qrcode({
-          "render": "div",
-          "size": 180,
-          "text": encodeURI(url)
-        });
-        e_qrcode.css({
-          top: offset.top + 20,
-          left: offset.left -150,
-        });
+      var alt = img.alt;
+      if (alt) {
+        var caption = document.createElement('span');
+        caption.className = 'caption';
+        caption.textContent = alt;
+        img.parentNode.insertBefore(caption, img.nextSibling);
       }
-    });
 
-  }).on('click', '.article-share-box', function(e){
-    e.stopPropagation();
-  }).on('click', '.article-share-box-input', function(){
-    $(this).select();
-  }).on('click', '.article-share-box-link', function(e){
-    e.preventDefault();
-    e.stopPropagation();
-
-    window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
-  });
-
-  // Caption
-  $('.article-entry').each(function(i){
-    $(this).find('img').each(function(){
-      if ($(this).parent().hasClass('fancybox')) return;
-
-      var alt = this.alt;
-
-      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
-
-      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
-    });
-
-    $(this).find('.fancybox').each(function(){
-      $(this).attr('rel', 'article' + i);
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', function() {
+        var overlay = document.createElement('div');
+        overlay.className = 'lightbox-overlay';
+        var clone = document.createElement('img');
+        clone.src = img.src;
+        clone.alt = img.alt;
+        overlay.appendChild(clone);
+        document.body.appendChild(overlay);
+        document.body.style.overflow = 'hidden';
+        overlay.addEventListener('click', function() {
+          document.body.removeChild(overlay);
+          document.body.style.overflow = '';
+        });
+        document.addEventListener('keydown', function escHandler(e) {
+          if (e.key === 'Escape') {
+            document.body.removeChild(overlay);
+            document.body.style.overflow = '';
+            document.removeEventListener('keydown', escHandler);
+          }
+        });
+      });
     });
   });
 
-  if ($.fancybox){
-    $('.fancybox').fancybox();
+  /* ---------- Mobile Navigation ---------- */
+  var container = document.getElementById('container');
+  var toggle = document.getElementById('main-nav-toggle');
+  var wrap = document.getElementById('wrap');
+  var isAnimating = false;
+
+  if (toggle && container && wrap) {
+    toggle.addEventListener('click', function() {
+      if (isAnimating) return;
+      isAnimating = true;
+      container.classList.toggle('mobile-nav-on');
+      setTimeout(function() { isAnimating = false; }, 200);
+    });
+
+    wrap.addEventListener('click', function() {
+      if (isAnimating || !container.classList.contains('mobile-nav-on')) return;
+      container.classList.remove('mobile-nav-on');
+    });
   }
 
-  // Mobile nav
-  var $container = $('#container'),
-    isMobileNavAnim = false,
-    mobileNavAnimDuration = 200;
-
-  var startMobileNavAnim = function(){
-    isMobileNavAnim = true;
-  };
-
-  var stopMobileNavAnim = function(){
-    setTimeout(function(){
-      isMobileNavAnim = false;
-    }, mobileNavAnimDuration);
-  }
-
-  $('#main-nav-toggle').on('click', function(){
-    if (isMobileNavAnim) return;
-
-    startMobileNavAnim();
-    $container.toggleClass('mobile-nav-on');
-    stopMobileNavAnim();
+  /* ---------- Keyboard Shortcuts ---------- */
+  document.addEventListener('keydown', function(e) {
+    // 't' for back to top
+    if (e.key === 't' && !e.ctrlKey && !e.metaKey && !e.altKey &&
+        document.activeElement === document.body) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    // 'h' for home
+    if (e.key === 'h' && !e.ctrlKey && !e.metaKey && !e.altKey &&
+        document.activeElement === document.body) {
+      window.location.href = '/';
+    }
   });
 
-  $('#wrap').on('click', function(){
-    if (isMobileNavAnim || !$container.hasClass('mobile-nav-on')) return;
-
-    $container.removeClass('mobile-nav-on');
-  });
-})(jQuery);
+})();
